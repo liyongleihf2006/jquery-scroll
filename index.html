@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>jquery-scroll</title>
+    <script src="https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+    <script src="jquery-scroll.js"></script>
+</head>
+<body>
+    <table style="table-layout: fixed;width: 100%;" border="1">
+        <thead>
+            <tr>
+                <th>编号</th>
+                <th>姓名</th>
+                <th>年龄</th>
+                <th>地址</th>
+            </tr>
+        </thead>
+        <tbody id="container">
+        </tbody>
+    </table>
+    <div id="loading" style="display: none;text-align: center">加载中...</div>
+    <div id="complete" style="display: none;text-align: center">数据全部加载完毕了</div>
+    <div id="more" style="display: none;text-align: center">点击加载更多</div>
+    <script>
+        var total=Math.floor(200*(1+Math.random()));
+        var prePage=50;
+        var pageIndex=0;
+        getData().done(function(data){
+           renderTable(data);
+        });
+        $(window).jscroll({
+            allowScrollCount:2,
+            done:function(promise){
+                /*每次滚动条滚动到最底部或者调用done方法,并且上一次委托完成以后执行的代码,在这里是向表格中添加行*/
+                render().done(function(){
+                    /*数据请求完毕后将"加载中..."隐藏*/
+                    $("#loading").hide();
+                    /*当加载的数据数量小于总数的时候,让注入的委托(promise)解决(resolve),若不调用解决,那么后面滚动滚动条或者调用done方法将永远不会执行done事件中的代码*/
+                    if(prePage*pageIndex<total){
+                        promise.resolve();
+                        /*当期望加载的数据数量大于总数的时候，让注入的委托(promise)拒绝(reject),这时候将执行fail事件，并且调用了该方法以后将永远不能再执行done事件中的代码*/
+                    }else{
+                        promise.reject();
+                    }
+                });
+            },
+            fail:function(){
+                /*在这个例子中，当执行拒绝的时候，我们认为数据已经全部加载完毕了，所以将"加载完毕了"展示*/
+                $("#complete").show();
+            },
+            pending:function(){
+                /*委托中，即产生委托但委托未解决并也未拒绝的时候，在这个例子中让"加载更多"隐藏,让"加载中..."展示*/
+                $("#more").hide();
+                $("#loading").show();
+            },
+            exceed:function(){
+                /*当执行done事件的次数不小于允许滚动加载的次数(allScrollCount)时,当委托解决的时候，触发的事件,在这个例子中是将"加载更多"按钮展示出来*/
+                $("#more").show();
+            }
+        });
+        $("#more").on("click",function(){
+            $(window).jscroll("done");
+        });
+        /*这个例子中的一个方法,加载数据并渲染例子中的table*/
+        function render(){
+            return getData().done(function(data){
+                renderTable(data);
+            });
+        }
+        function getData(){
+            var deferred= $.Deferred();
+            var data=[];
+            var first=prePage*pageIndex;
+            pageIndex++;
+            for(var i=0;i<Math.min(prePage,total-first);i++){
+                data.push({
+                    no:+(first+i+1),
+                    name:"name"+(first+i+1),
+                    age:"age"+(first+i+1),
+                    address:"address"+(first+i+1)
+                })
+            }
+            setTimeout(function(){
+                deferred.resolve(data);
+            },Math.floor(Math.random()*2000));
+            return deferred;
+        }
+        function renderTable(data){
+            $("#container").append(
+                data.map(function(item){
+                    return $("<tr/>").append(
+                            $("<td/>",{
+                                "text":item.no
+                            }),
+                            $("<td/>",{
+                                "text":item.name
+                            }),
+                            $("<td/>",{
+                                "text":item.age
+                            }),
+                            $("<td/>",{
+                                "text":item.address
+                            })
+                    )
+                })
+            )
+        }
+    </script>
+</body>
+</html>
